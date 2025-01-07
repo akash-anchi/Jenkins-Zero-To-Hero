@@ -1,29 +1,28 @@
 pipeline {
     agent any
-    
     environment {
-        DOCKERHUB_USERNAME = 'akash-anchi'  // Replace with your Docker Hub username
-        DOCKERHUB_PASSWORD = credentials('docker-hub-password')  // Use Jenkins credentials for Docker Hub login
+        DOCKER_HUB_CREDENTIALS = 'docker-hub-password'  // Ensure this matches the Jenkins credential ID
     }
-
     stages {
-        stage('Build Docker Image') {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Login to Docker Hub') {
             steps {
                 script {
-                    // Build the Docker image
-                    def app = docker.build("index.docker.io/${DOCKERHUB_USERNAME}/ultimate-cicd:19")
+                    withCredentials([usernamePassword(credentialsId: DOCKER_HUB_CREDENTIALS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
+                    }
                 }
             }
         }
-
-        stage('Push Docker Image') {
+        stage('Build and Push Docker Image') {
             steps {
                 script {
-                    // Log into Docker Hub
-                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
-                        // Push the image to your Docker Hub repository
-                        app.push()
-                    }
+                    sh "docker build -t myimage ."
+                    sh "docker push myimage"
                 }
             }
         }
