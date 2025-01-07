@@ -1,30 +1,35 @@
 pipeline {
     agent any
     environment {
-        DOCKER_HUB_CREDENTIALS = 'docker-hub-password'  // Ensure this matches the Jenkins credential ID
+        DOCKER_IMAGE = 'myimage'
+        DOCKER_REGISTRY = 'docker.io'
+        DOCKER_CREDENTIALS = credentials('docker-hub-credentials')  // Update the credential ID if needed
     }
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
                 checkout scm
             }
         }
-        stage('Login to Docker Hub') {
+
+        stage('Build Docker Image') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: DOCKER_HUB_CREDENTIALS, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]) {
-                        sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin"
+                    // Build Docker image using Dockerfile from spring-boot-app directory
+                    sh 'docker build -t $DOCKER_IMAGE ./java-maven-sonar-argocd-helm-k8s/spring-boot-app'
+                }
+            }
+        }
+
+        stage('Login to Docker Registry') {
+            steps {
+                script {
+                    // Login to Docker registry
+                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS, usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                        sh "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin"
                     }
                 }
             }
         }
-        stage('Build and Push Docker Image') {
-            steps {
-                script {
-                    sh "docker build -t myimage ."
-                    sh "docker push myimage"
-                }
-            }
-        }
-    }
-}
+
+        stage('Push Docker Image
